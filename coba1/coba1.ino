@@ -1,0 +1,500 @@
+
+#include <Arduino.h>
+#include <p1_inferencing.h>
+#include "esp_camera.h"
+#include "esp_heap_caps.h"
+#include "edge-impulse-sdk/dsp/image/image.hpp"
+
+// ==========================================
+// 1. PENGATURAN MODEL
+// ==========================================
+// Komunikasi UART dengan ESP32-C6
+#define LINK_RX 2
+#define LINK_TX 1
+
+HardwareSerial LinkSerial(1);
+
+#define LABEL_BOTOL "beer"
+#define THRESHOLD 0.60f
+
+#define CAM_WIDTH  320
+#define CAM_HEIGHT 240
+
+// ==========================================
+// 2. PIN ESP32-S3-CAM HW-679
+// ==========================================
+
+#define PWDN_GPIO_NUM  -1
+#define RESET_GPIO_NUM -1
+#define XCLK_GPIO_NUM  15
+#define SIOD_GPIO_NUM   4
+#define SIOC_GPIO_NUM   5
+
+#define Y9_GPIO_NUM    16
+#define Y8_GPIO_NUM    17
+#define Y7_GPIO_NUM    18
+#define Y6_GPIO_NUM    12
+#define Y5_GPIO_NUM    10
+#define Y4_GPIO_NUM     8
+#define Y3_GPIO_NUM     9
+#define Y2_GPIO_NUM    11
+
+#define VSYNC_GPIO_NUM  6
+#define HREF_GPIO_NUM   7
+#define PCLK_GPIO_NUM  13
+
+// ==========================================
+// 3. VARIABEL GLOBAL
+// ==========================================
+
+static bool camera_ready = false;
+
+// Buffer harus sebesar gambar kamera asli
+static uint8_t *snapshot_buf = nullptr;
+
+enum Hasil {
+  HASIL_BENAR,
+  HASIL_SALAH,
+  HASIL_ERROR
+};
+
+// ==========================================
+// 4. INFORMASI MEMORI
+// ==========================================
+
+void printMemory(const char *judul) {
+
+  Serial.println();
+  Serial.println(judul);
+
+  Serial.printf(
+    "Free Heap       : %u bytes\n",
+    (unsigned int)ESP.getFreeHeap()
+  );
+
+  Serial.printf(
+    "Free PSRAM      : %u bytes\n",
+    (unsigned int)ESP.getFreePsram()
+  );
+
+  Serial.printf(
+    "Largest Heap    : %u bytes\n",
+    (unsigned int)heap_caps_get_largest_free_block(
+      MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT
+    )
+  );
+
+  Serial.printf(
+    "Largest PSRAM   : %u bytes\n",
+    (unsigned int)heap_caps_get_largest_free_block(
+      MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT
+    )
+  );
+}
+
+// ==========================================
+// 5. INISIALISASI KAMERA
+// ==========================================
+
+bool initCamera() {
+
+  camera_config_t config = {};
+
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
+#else
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+#endif
+
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d0 = Y2_GPIO_NUM;
+
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+
+  config.xclk_freq_hz = 10000000;
+
+  config.ledc_timer = LEDC_TIMER_0;
+  config.ledc_channel = LEDC_CHANNEL_0;
+
+  config.pixel_format = PIXFORMAT_RGB565;
+  config.frame_size = FRAMESIZE_QVGA;
+
+  config.fb_count = 1;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+
+  esp_err_t err = esp_camera_init(&config);
+
+  if (err != ESP_OK) {
+    Serial.printf(
+      "Kamera gagal: 0x%x\n",
+      err
+    );
+    return false;
+  }
+
+  camera_ready = true;
+
+  Serial.println("Kamera berhasil diinisialisasi!");
+
+  return true;
+}
+
+// ==========================================
+// 6. ALOKASI BUFFER
+// ==========================================
+
+bool allocateMemory() {
+
+  if (!psramFound()) {
+    Serial.println("PSRAM tidak ditemukan!");
+    return false;
+  }
+
+  // Buffer menggunakan ukuran kamera asli,
+  // bukan ukuran input model 96 x 96.
+
+  size_t buffer_size =
+    CAM_WIDTH * CAM_HEIGHT * 3;
+
+  Serial.printf(
+    "Ukuran buffer: %u bytes\n",
+    (unsigned int)buffer_size
+  );
+
+  Serial.printf(
+    "Input model: %d x %d\n",
+    EI_CLASSIFIER_INPUT_WIDTH,
+    EI_CLASSIFIER_INPUT_HEIGHT
+  );
+
+  snapshot_buf = (uint8_t *)ps_malloc(buffer_size);
+
+  if (snapshot_buf == nullptr) {
+    Serial.println("Alokasi PSRAM gagal!");
+    return false;
+  }
+
+  Serial.println("Buffer berhasil dialokasikan!");
+
+  return true;
+}
+
+// ==========================================
+// 7. AMBIL DAN PROSES GAMBAR
+// ==========================================
+
+bool captureImage() {
+
+  if (!camera_ready || snapshot_buf == nullptr) {
+    Serial.println("Kamera atau buffer belum siap!");
+    return false;
+  }
+
+  camera_fb_t *fb = esp_camera_fb_get();
+
+  if (fb == nullptr) {
+    Serial.println("Gagal mengambil frame!");
+    return false;
+  }
+
+  if (fb->format != PIXFORMAT_RGB565 ||
+      fb->width != CAM_WIDTH ||
+      fb->height != CAM_HEIGHT) {
+
+    Serial.println("Format atau ukuran kamera tidak sesuai!");
+
+    esp_camera_fb_return(fb);
+    return false;
+  }
+
+  // Konversi RGB565 menjadi RGB888
+  bool converted = fmt2rgb888(
+    fb->buf,
+    fb->len,
+    PIXFORMAT_RGB565,
+    snapshot_buf
+  );
+
+  // Kembalikan framebuffer kamera
+  esp_camera_fb_return(fb);
+
+  if (!converted) {
+    Serial.println("Konversi RGB888 gagal!");
+    return false;
+  }
+
+  Serial.println("Konversi RGB888 berhasil!");
+
+  // Resize in-place.
+  // Buffer tetap berukuran 320 x 240 x 3 byte.
+  int resize_status =
+    ei::image::processing::crop_and_interpolate_rgb888(
+      snapshot_buf,
+      CAM_WIDTH,
+      CAM_HEIGHT,
+      snapshot_buf,
+      EI_CLASSIFIER_INPUT_WIDTH,
+      EI_CLASSIFIER_INPUT_HEIGHT
+    );
+
+  if (resize_status != EIDSP_OK) {
+    Serial.printf(
+      "Resize gagal: %d\n",
+      resize_status
+    );
+    return false;
+  }
+
+  Serial.println("Resize gambar berhasil!");
+
+  return true;
+}
+
+// ==========================================
+// 8. CALLBACK DATA EDGE IMPULSE
+// ==========================================
+
+static int getImageData(
+  size_t offset,
+  size_t length,
+  float *output
+) {
+
+  if (snapshot_buf == nullptr || output == nullptr) {
+    return -1;
+  }
+
+  const size_t total_pixels =
+    EI_CLASSIFIER_INPUT_WIDTH *
+    EI_CLASSIFIER_INPUT_HEIGHT;
+
+  if (offset > total_pixels ||
+      length > total_pixels - offset) {
+    return -1;
+  }
+
+  size_t pixel_index = offset * 3;
+
+  for (size_t i = 0; i < length; i++) {
+
+    uint32_t pixel =
+      ((uint32_t)snapshot_buf[pixel_index + 2] << 16) |
+      ((uint32_t)snapshot_buf[pixel_index + 1] << 8) |
+      ((uint32_t)snapshot_buf[pixel_index]);
+
+    output[i] = (float)pixel;
+
+    pixel_index += 3;
+  }
+
+  return 0;
+}
+
+// ==========================================
+// 9. PROSES DETEKSI EDGE IMPULSE
+// ==========================================
+
+Hasil detectObject() {
+
+#if EI_CLASSIFIER_OBJECT_DETECTION != 1
+  Serial.println("Model bukan Object Detection!");
+  return HASIL_ERROR;
+#endif
+
+  Serial.println("\n[1] Mulai capture");
+
+  if (!captureImage()) {
+    Serial.println("Capture gagal!");
+    return HASIL_ERROR;
+  }
+
+  Serial.println("[2] Capture berhasil");
+
+  printMemory("Memori sebelum inferensi");
+
+  ei::signal_t signal;
+
+  signal.total_length =
+    EI_CLASSIFIER_INPUT_WIDTH *
+    EI_CLASSIFIER_INPUT_HEIGHT;
+
+  signal.get_data = getImageData;
+
+  ei_impulse_result_t result = {0};
+
+  Serial.println("\n[3] Mulai Edge Impulse");
+
+  Serial.printf(
+    "Free Heap sebelum AI: %u bytes\n",
+    (unsigned int)ESP.getFreeHeap()
+  );
+
+  Serial.printf(
+    "Free PSRAM sebelum AI: %u bytes\n",
+    (unsigned int)ESP.getFreePsram()
+  );
+
+  EI_IMPULSE_ERROR status =
+    run_classifier(&signal, &result, false);
+
+  Serial.println("[4] Edge Impulse selesai");
+
+  if (status != EI_IMPULSE_OK) {
+
+    Serial.printf(
+      "Inferensi gagal: %d\n",
+      status
+    );
+
+    return HASIL_ERROR;
+  }
+
+  printMemory("Memori setelah inferensi");
+
+  Serial.println("\n===== HASIL DETEKSI =====");
+
+  Serial.printf(
+    "DSP: %d ms | Klasifikasi: %d ms\n",
+    result.timing.dsp,
+    result.timing.classification
+  );
+
+  bool bottle_found = false;
+
+  for (uint32_t i = 0;
+       i < result.bounding_boxes_count;
+       i++) {
+
+    ei_impulse_result_bounding_box_t box =
+      result.bounding_boxes[i];
+
+    if (box.value < THRESHOLD) {
+      continue;
+    }
+
+    Serial.printf(
+      "Objek: %s | Akurasi: %.2f\n",
+      box.label,
+      box.value
+    );
+
+    if (strcmp(box.label, LABEL_BOTOL) == 0) {
+      bottle_found = true;
+    }
+  }
+
+  if (bottle_found) {
+    return HASIL_BENAR;
+  }
+
+  return HASIL_SALAH;
+}
+
+// ==========================================
+// 10. SETUP
+// ==========================================
+
+void setup() {
+
+  Serial.begin(115200);
+  delay(2000);
+
+LinkSerial.begin(
+  115200,
+  SERIAL_8N1,
+  LINK_RX,
+  LINK_TX
+);
+
+LinkSerial.setTimeout(300);
+  Serial.println();
+  Serial.println("==============================");
+  Serial.println("ESP32-S3 SMART TRASH BIN");
+  Serial.println("EDGE IMPULSE OBJECT DETECTION");
+  Serial.println("==============================");
+
+  printMemory("Memori awal");
+
+  Serial.println("\nLabel model:");
+
+  for (uint16_t i = 0;
+       i < EI_CLASSIFIER_LABEL_COUNT;
+       i++) {
+
+    Serial.println(
+      ei_classifier_inferencing_categories[i]
+    );
+  }
+
+  Serial.println("\nMemulai alokasi buffer...");
+
+  if (!allocateMemory()) {
+    Serial.println("Gagal alokasi buffer!");
+
+    while (true) {
+      delay(1000);
+    }
+  }
+
+  Serial.println("\nMemulai kamera...");
+
+  if (!initCamera()) {
+    Serial.println("Kamera gagal!");
+
+    while (true) {
+      delay(1000);
+    }
+  }
+
+  Serial.println("\nSISTEM SIAP!");
+  LinkSerial.println("READY");
+  
+Serial.println("UART SIAP - MENUNGGU ESP32-C6");
+}
+
+// ==========================================
+// 11. LOOP
+// ==========================================
+
+void loop() {
+
+  Serial.println("\n==============================");
+  Serial.println("MULAI DETEKSI");
+
+  Hasil hasil = detectObject();
+
+  if (hasil == HASIL_BENAR) {
+
+    Serial.println("\n>>> BEER TERDETEKSI <<<");
+
+  }
+  else if (hasil == HASIL_SALAH) {
+
+    Serial.println("\n>>> BEER TIDAK TERDETEKSI <<<");
+
+  }
+  else {
+
+    Serial.println("\n>>> DETEKSI ERROR <<<");
+
+  }
+
+  printMemory("Memori setelah deteksi");
+
+  delay(1500);
+}

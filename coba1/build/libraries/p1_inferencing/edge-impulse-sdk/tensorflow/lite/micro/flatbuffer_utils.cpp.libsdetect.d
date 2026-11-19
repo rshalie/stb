@@ -1,0 +1,28 @@
+flatbuffer_utils.o: \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src\edge-impulse-sdk\tensorflow\lite\micro\flatbuffer_utils.cpp \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/micro/flatbuffer_utils.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/flatbuffers.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_array.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_base.h \
+ C:\Users\raesha\AppData\Local\Arduino15\packages\esp32\tools\esp32s3-libs\3.3.12/include/newlib/platform_include/assert.h \
+ C:\Users\raesha\AppData\Local\Arduino15\packages\esp32\tools\esp32s3-libs\3.3.12/qio_opi/include/sdkconfig.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_stl_emulation.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_vector.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_buffer.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_buffer_ref.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_verifier.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_detached_buffer.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_allocator.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_default_allocator.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_flatbuffer_builder.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_string.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_struct.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_table.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_vector_downward.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/flexbuffers.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/fb_util.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/c/common.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/core/c/common.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/core/c/c_api_types.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/schema/schema_generated.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/schema/schema_generated_full.h

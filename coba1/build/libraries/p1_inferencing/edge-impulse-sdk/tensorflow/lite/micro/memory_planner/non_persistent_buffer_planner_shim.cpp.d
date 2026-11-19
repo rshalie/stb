@@ -1,0 +1,12 @@
+C:\Users\raesha\Documents\Arduino\coba1\build\libraries\p1_inferencing\edge-impulse-sdk\tensorflow\lite\micro\memory_planner\non_persistent_buffer_planner_shim.cpp.o: \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src\edge-impulse-sdk\tensorflow\lite\micro\memory_planner\non_persistent_buffer_planner_shim.cpp \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/micro/memory_planner/non_persistent_buffer_planner_shim.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/micro/compatibility.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/micro/memory_planner/memory_plan_struct.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/micro/micro_utils.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/portable_type_to_tflitetype.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/core/c/common.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/core/c/c_api_types.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/c/common.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/micro/memory_planner/micro_memory_planner.h \
+ C:\Users\raesha\Documents\Arduino\libraries\p1_inferencing\src/edge-impulse-sdk/tensorflow/lite/micro/micro_log.h
