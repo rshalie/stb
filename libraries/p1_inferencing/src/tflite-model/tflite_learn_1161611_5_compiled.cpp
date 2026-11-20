@@ -94,9 +94,9 @@ using namespace tflite::ops::micro;
 namespace {
 
 #if defined(EI_CLASSIFIER_ALLOCATION_STATIC_HIMAX) || defined(EI_CLASSIFIER_ALLOCATION_STATIC_HIMAX_GNU)
-constexpr int kTensorArenaSize = 154880;
+constexpr int kTensorArenaSize = 220000;
 #else
-constexpr int kTensorArenaSize = 153856;
+constexpr int kTensorArenaSize = 220000;
 #endif
 
 #if defined(EI_CLASSIFIER_ALLOCATION_STATIC)
@@ -1271,7 +1271,8 @@ static void * AllocatePersistentBufferImpl(struct TfLiteContext* ctx,
 
     // OK, this will look super weird, but.... we have CMSIS-NN buffers which
     // we cannot calculate beforehand easily.
-    ptr = ei_calloc(bytes, 1);
+    size_t alloc_bytes = ((bytes + 15) & ~15) + 32;
+    ptr = ei_calloc(alloc_bytes, 1);
     if (ptr == NULL) {
       ei_printf("ERR: Failed to allocate persistent buffer of size %d\n", (int)bytes);
       return NULL;

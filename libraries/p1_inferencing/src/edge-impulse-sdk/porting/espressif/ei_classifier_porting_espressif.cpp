@@ -109,17 +109,22 @@ __attribute__((weak)) void *ei_malloc(size_t size) {
 }
 
 __attribute__((weak)) void *ei_calloc(size_t nitems, size_t size) {
+    size_t total = nitems * size;
+    size_t aligned_size = ((total + 15) & ~15) + 32;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    return heap_caps_calloc(nitems, size, MALLOC_CAP_DEFAULT);
+    void *ptr = heap_caps_aligned_alloc(16, aligned_size, MALLOC_CAP_DEFAULT);
+    if (ptr) {
+        memset(ptr, 0, aligned_size);
+        return ptr;
+    }
 #else
     void *p;
-    p = aligned_alloc(16, nitems * size);
-    if (p == nullptr)
+    p = aligned_alloc(16, aligned_size);
+    if (p != nullptr) {
+        memset(p, '\0', aligned_size);
         return p;
-
-    memset(p, '\0', nitems * size);
-    return p;
+    }
 #endif
 #endif
     return calloc(nitems, size);
